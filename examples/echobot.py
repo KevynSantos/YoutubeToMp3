@@ -22,9 +22,7 @@ import subprocess
 import sys
 from io import StringIO, BytesIO
 import fileinput
-
-import pydub
-import youtube_dl
+import datetime
 
 from telegram import Update, ForceReply
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
@@ -49,52 +47,41 @@ def start(update: Update, _: CallbackContext) -> None:
 
 
 def convert(update: Update, _: CallbackContext) -> None:
-    message = update['message']['text']
-    link = message.split('/convert ')[1];
-    print("Link:"+link);
+    message = update.message.text
+    link = message.split('/convert ')[1]
+    print("Link:" + link)
     update.message.reply_text('Iniciando Download e Conversão...')
 
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-    }
+    # Gera uma string de data e hora para incluir no nome do arquivo
+    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    output_file = f"audio_{timestamp}.mp3"
 
     try:
+        comando = ['yt-dlp', '-i', '--extract-audio', '--audio-format', 'mp3', link, '-o', output_file]
 
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(link, download=False)
-                video_title = info_dict.get('title', None)
-                id = info_dict.get('id',None)
+        resultado = subprocess.run(comando, capture_output=True, text=True)
 
-        subprocess.check_output('youtube-dl -i --extract-audio --audio-format mp3 '+link, shell=True);
-
-        nameFile = video_title.replace("/", "_") + "-" + id + '.mp3'
+        # Verifica se houve erro durante o comando
+        if resultado.returncode != 0:
+            raise RuntimeError(resultado.stderr)
 
         update.message.reply_text('Arquivo Baixado')
 
-        path = sys.path[0]+"\\"+nameFile
+        # Envia o arquivo de áudio
+        with open(output_file, 'rb') as audio_file:
+            update.message.reply_audio(audio=audio_file, title="Download")
+            update.message.reply_text('Conversão concluída')
 
-        waiting = True
-        update.message.reply_text('Em preparação')
-        while(waiting):
-            if(os.path.exists(path)):
-                update.message.reply_audio(audio=open(file=path,mode='rb'), title=nameFile)
-                update.message.reply_text('Conversão concluída')
-                waiting = False
-    except:
-        messageErrror = "Houve algum problema durante o processamento"
-        update.message.reply_text(messageErrror)
-    finally:
-        if (os.path.exists(path)):
-            try:
-                os.remove(path)
-            except(PermissionError):
-                messageErrror = "Erro, por favor tente converter novamente. Caso tenha recebido o arquivo, ignore essa mensagem."
-                update.message.reply_text(messageErrror)
+        # Apaga o arquivo após o envio
+        os.remove(output_file)
+
+    except RuntimeError as e:
+        messageError = "Houve algum problema durante o processamento: " + str(e)
+        update.message.reply_text(messageError)
+    except Exception as e:
+        # Captura outras exceções, como erro ao apagar o arquivo
+        messageError = f"Erro: {e}"
+        update.message.reply_text(messageError)
 
 
 def help_command(update: Update, _: CallbackContext) -> None:
