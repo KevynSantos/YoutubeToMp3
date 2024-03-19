@@ -62,12 +62,16 @@ async def convert(update: Update, context: CallbackContext) -> None:
 
     with tempfile.TemporaryDirectory() as temp_dir:
         output_template = os.path.join(temp_dir, "%(title)s.%(ext)s")
-
         comando = ['yt-dlp', '-i', '--socket-timeout', '60', link, '-o', output_template]
-        resultado = subprocess.run(comando, capture_output=True, text=True)
 
-        if resultado.returncode != 0:
-            await update.message.reply_text(f"Houve algum problema durante o processamento: {resultado.stderr}")
+        # Execute o comando sem decodificar automaticamente a saída
+        processo = subprocess.Popen(comando, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = processo.communicate()
+
+        # Decodifica a saída manualmente usando UTF-8
+        if processo.returncode != 0:
+            erro = stderr.decode('utf-8')
+            await update.message.reply_text(f"Houve algum problema durante o processamento: {erro}")
             return
 
         for filename in os.listdir(temp_dir):
@@ -77,7 +81,6 @@ async def convert(update: Update, context: CallbackContext) -> None:
                     await update.message.reply_audio(audio=audio_file, title="Download")
                 await update.message.reply_text('Envio concluído.')
             except Exception as e:
-                # Convertendo a exceção para string para verificar a presença da substring
                 error_message = str(e)
                 if "Timed out" in error_message:
                     await update.message.reply_text(
