@@ -1,6 +1,7 @@
-sphinx==3.5.4
-sphinx-pypi-upload
-# When bumping this, make sure to rebuild the dark-mode CSS
-# More instructions at source/_static/dark.css
-# Ofc once https://github.com/readthedocs/sphinx_rtd_theme/issues/224 is closed, we should use that
-sphinx_rtd_theme==0.5.2
+sphinx==7.2.6
+furo==2024.1.29
+furo-sphinx-search @ git+https://github.com/harshil21/furo-sphinx-search@v0.2.0.1
+sphinx-paramlinks==0.6.0
+sphinxcontrib-mermaid==0.9.2
+sphinx-copybutton==0.5.2
+sphinx-inline-tabs==2023.4.21

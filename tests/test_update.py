@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 # A library that provides a Python interface to the Telegram Bot API
-# Copyright (C) 2015-2022
+# Copyright (C) 2015-2024
 # Leandro Toledo de Souza <devs@python-telegram-bot.org>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,106 +17,174 @@
 # You should have received a copy of the GNU Lesser Public License
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
 import time
+from datetime import datetime
 
 import pytest
 
 from telegram import (
-    Message,
-    User,
-    Update,
-    Chat,
     CallbackQuery,
-    InlineQuery,
-    ChosenInlineResult,
-    ShippingQuery,
-    PreCheckoutQuery,
-    Poll,
-    PollOption,
-    ChatMemberUpdated,
-    ChatMember,
+    Chat,
+    ChatBoost,
+    ChatBoostRemoved,
+    ChatBoostSourcePremium,
+    ChatBoostUpdated,
     ChatJoinRequest,
+    ChatMemberOwner,
+    ChatMemberUpdated,
+    ChosenInlineResult,
+    InaccessibleMessage,
+    InlineQuery,
+    Message,
+    MessageReactionCountUpdated,
+    MessageReactionUpdated,
+    Poll,
+    PollAnswer,
+    PollOption,
+    PreCheckoutQuery,
+    ReactionCount,
+    ReactionTypeEmoji,
+    ShippingQuery,
+    Update,
+    User,
 )
-from telegram.poll import PollAnswer
-from telegram.utils.helpers import from_timestamp
+from telegram._utils.datetime import from_timestamp
+from telegram.warnings import PTBUserWarning
+from tests.auxil.slots import mro_slots
 
-message = Message(1, None, Chat(1, ''), from_user=User(1, '', False), text='Text')
+message = Message(1, datetime.utcnow(), Chat(1, ""), from_user=User(1, "", False), text="Text")
 chat_member_updated = ChatMemberUpdated(
-    Chat(1, 'chat'),
-    User(1, '', False),
+    Chat(1, "chat"),
+    User(1, "", False),
     from_timestamp(int(time.time())),
-    ChatMember(User(1, '', False), ChatMember.CREATOR),
-    ChatMember(User(1, '', False), ChatMember.CREATOR),
+    ChatMemberOwner(User(1, "", False), True),
+    ChatMemberOwner(User(1, "", False), True),
 )
 
 
 chat_join_request = ChatJoinRequest(
     chat=Chat(1, Chat.SUPERGROUP),
-    from_user=User(1, 'first_name', False),
+    from_user=User(1, "first_name", False),
     date=from_timestamp(int(time.time())),
-    bio='bio',
+    user_chat_id=1,
+    bio="bio",
 )
 
+chat_boost = ChatBoostUpdated(
+    chat=Chat(1, "priv"),
+    boost=ChatBoost(
+        "1",
+        from_timestamp(int(time.time())),
+        from_timestamp(int(time.time())),
+        ChatBoostSourcePremium(User(1, "", False)),
+    ),
+)
+
+removed_chat_boost = ChatBoostRemoved(
+    Chat(1, "private"),
+    "2",
+    from_timestamp(int(time.time())),
+    ChatBoostSourcePremium(User(1, "name", False)),
+)
+
+message_reaction = MessageReactionUpdated(
+    chat=Chat(1, "chat"),
+    message_id=1,
+    date=from_timestamp(int(time.time())),
+    old_reaction=(ReactionTypeEmoji("👍"),),
+    new_reaction=(ReactionTypeEmoji("👍"),),
+    user=User(1, "name", False),
+)
+
+
+message_reaction_count = MessageReactionCountUpdated(
+    chat=Chat(1, "chat"),
+    message_id=1,
+    date=from_timestamp(int(time.time())),
+    reactions=(ReactionCount(ReactionTypeEmoji("👍"), 1),),
+)
+
+
 params = [
-    {'message': message},
-    {'edited_message': message},
-    {'callback_query': CallbackQuery(1, User(1, '', False), 'chat', message=message)},
-    {'channel_post': message},
-    {'edited_channel_post': message},
-    {'inline_query': InlineQuery(1, User(1, '', False), '', '')},
-    {'chosen_inline_result': ChosenInlineResult('id', User(1, '', False), '')},
-    {'shipping_query': ShippingQuery('id', User(1, '', False), '', None)},
-    {'pre_checkout_query': PreCheckoutQuery('id', User(1, '', False), '', 0, '')},
-    {'poll': Poll('id', '?', [PollOption('.', 1)], False, False, False, Poll.REGULAR, True)},
-    {'poll_answer': PollAnswer("id", User(1, '', False), [1])},
-    {'my_chat_member': chat_member_updated},
-    {'chat_member': chat_member_updated},
-    {'chat_join_request': chat_join_request},
+    {"message": message},
+    {"edited_message": message},
+    {"callback_query": CallbackQuery(1, User(1, "", False), "chat", message=message)},
+    {"channel_post": message},
+    {"edited_channel_post": message},
+    {"inline_query": InlineQuery(1, User(1, "", False), "", "")},
+    {"chosen_inline_result": ChosenInlineResult("id", User(1, "", False), "")},
+    {"shipping_query": ShippingQuery("id", User(1, "", False), "", None)},
+    {"pre_checkout_query": PreCheckoutQuery("id", User(1, "", False), "", 0, "")},
+    {"poll": Poll("id", "?", [PollOption(".", 1)], False, False, False, Poll.REGULAR, True)},
+    {
+        "poll_answer": PollAnswer(
+            "id",
+            [1],
+            User(
+                1,
+                "",
+                False,
+            ),
+            Chat(1, ""),
+        )
+    },
+    {"my_chat_member": chat_member_updated},
+    {"chat_member": chat_member_updated},
+    {"chat_join_request": chat_join_request},
+    {"chat_boost": chat_boost},
+    {"removed_chat_boost": removed_chat_boost},
+    {"message_reaction": message_reaction},
+    {"message_reaction_count": message_reaction_count},
     # Must be last to conform with `ids` below!
-    {'callback_query': CallbackQuery(1, User(1, '', False), 'chat')},
+    {"callback_query": CallbackQuery(1, User(1, "", False), "chat")},
 ]
 
 all_types = (
-    'message',
-    'edited_message',
-    'callback_query',
-    'channel_post',
-    'edited_channel_post',
-    'inline_query',
-    'chosen_inline_result',
-    'shipping_query',
-    'pre_checkout_query',
-    'poll',
-    'poll_answer',
-    'my_chat_member',
-    'chat_member',
-    'chat_join_request',
+    "message",
+    "edited_message",
+    "callback_query",
+    "channel_post",
+    "edited_channel_post",
+    "inline_query",
+    "chosen_inline_result",
+    "shipping_query",
+    "pre_checkout_query",
+    "poll",
+    "poll_answer",
+    "my_chat_member",
+    "chat_member",
+    "chat_join_request",
+    "chat_boost",
+    "removed_chat_boost",
+    "message_reaction",
+    "message_reaction_count",
 )
 
-ids = all_types + ('callback_query_without_message',)
+ids = (*all_types, "callback_query_without_message")
 
 
-@pytest.fixture(params=params, ids=ids)
+@pytest.fixture(scope="module", params=params, ids=ids)
 def update(request):
-    return Update(update_id=TestUpdate.update_id, **request.param)
+    return Update(update_id=TestUpdateBase.update_id, **request.param)
 
 
-class TestUpdate:
+class TestUpdateBase:
     update_id = 868573637
 
-    def test_slot_behaviour(self, update, recwarn, mro_slots):
-        for attr in update.__slots__:
-            assert getattr(update, attr, 'err') != 'err', f"got extra slot '{attr}'"
-        assert not update.__dict__, f"got missing slot(s): {update.__dict__}"
-        assert len(mro_slots(update)) == len(set(mro_slots(update))), "duplicate slot"
-        update.custom, update.update_id = 'should give warning', self.update_id
-        assert len(recwarn) == 1 and 'custom' in str(recwarn[0].message), recwarn.list
 
-    @pytest.mark.parametrize('paramdict', argvalues=params, ids=ids)
+class TestUpdateWithoutRequest(TestUpdateBase):
+    def test_slot_behaviour(self):
+        update = Update(self.update_id)
+        for attr in update.__slots__:
+            assert getattr(update, attr, "err") != "err", f"got extra slot '{attr}'"
+        assert len(mro_slots(update)) == len(set(mro_slots(update))), "duplicate slot"
+
+    @pytest.mark.parametrize("paramdict", argvalues=params, ids=ids)
     def test_de_json(self, bot, paramdict):
-        json_dict = {'update_id': TestUpdate.update_id}
+        json_dict = {"update_id": self.update_id}
         # Convert the single update 'item' to a dict of that item and apply it to the json_dict
         json_dict.update({k: v.to_dict() for k, v in paramdict.items()})
         update = Update.de_json(json_dict, bot)
+        assert update.api_kwargs == {}
 
         assert update.update_id == self.update_id
 
@@ -137,10 +205,30 @@ class TestUpdate:
         update_dict = update.to_dict()
 
         assert isinstance(update_dict, dict)
-        assert update_dict['update_id'] == update.update_id
+        assert update_dict["update_id"] == update.update_id
         for _type in all_types:
             if getattr(update, _type) is not None:
                 assert update_dict[_type] == getattr(update, _type).to_dict()
+
+    def test_equality(self):
+        a = Update(self.update_id, message=message)
+        b = Update(self.update_id, message=message)
+        c = Update(self.update_id)
+        d = Update(0, message=message)
+        e = User(self.update_id, "", False)
+
+        assert a == b
+        assert hash(a) == hash(b)
+        assert a is not b
+
+        assert a == c
+        assert hash(a) == hash(c)
+
+        assert a != d
+        assert hash(a) != hash(d)
+
+        assert a != e
+        assert hash(a) != hash(e)
 
     def test_effective_chat(self, update):
         # Test that it's sometimes None per docstring
@@ -165,6 +253,9 @@ class TestUpdate:
             update.channel_post is not None
             or update.edited_channel_post is not None
             or update.poll is not None
+            or update.chat_boost is not None
+            or update.removed_chat_boost is not None
+            or update.message_reaction_count is not None
         ):
             assert user.id == 1
         else:
@@ -184,27 +275,29 @@ class TestUpdate:
             or update.my_chat_member is not None
             or update.chat_member is not None
             or update.chat_join_request is not None
+            or update.chat_boost is not None
+            or update.removed_chat_boost is not None
+            or update.message_reaction is not None
+            or update.message_reaction_count is not None
         ):
             assert eff_message.message_id == message.message_id
         else:
             assert eff_message is None
 
-    def test_equality(self):
-        a = Update(self.update_id, message=message)
-        b = Update(self.update_id, message=message)
-        c = Update(self.update_id)
-        d = Update(0, message=message)
-        e = User(self.update_id, '', False)
+    def test_effective_message_inaccessible(self):
+        update = Update(
+            update_id=1,
+            callback_query=CallbackQuery(
+                "id",
+                User(1, "", False),
+                "chat",
+                message=InaccessibleMessage(message_id=1, chat=Chat(1, "")),
+            ),
+        )
+        with pytest.warns(
+            PTBUserWarning,
+            match="update.callback_query` is not `None`, but of type `InaccessibleMessage`",
+        ) as record:
+            assert update.effective_message is None
 
-        assert a == b
-        assert hash(a) == hash(b)
-        assert a is not b
-
-        assert a == c
-        assert hash(a) == hash(c)
-
-        assert a != d
-        assert hash(a) != hash(d)
-
-        assert a != e
-        assert hash(a) != hash(e)
+        assert record[0].filename == __file__
