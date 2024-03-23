@@ -62,7 +62,7 @@ async def convert(update: Update, context: CallbackContext) -> None:
 
     with tempfile.TemporaryDirectory() as temp_dir:
         output_template = os.path.join(temp_dir, "%(title)s.%(ext)s")
-        comando = ['yt-dlp', '-i', '--socket-timeout', '60', link, '-o', output_template]
+        comando = ['yt-dlp', '-i', '--extract-audio', '--audio-format', 'mp3', '--socket-timeout', '60', link, '-o', output_template]
 
         # Execute o comando sem decodificar automaticamente a saída
         processo = subprocess.Popen(comando, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
